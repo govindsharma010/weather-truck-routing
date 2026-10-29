@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import CheckpointTable from "./components/CheckpointTable.jsx";
+import MapView from "./components/MapView.jsx";
 import RouteCards from "./components/RouteCards.jsx";
 import TripForm from "./components/TripForm.jsx";
 import { planTrip } from "./lib/api.js";
@@ -70,7 +71,18 @@ export default function App() {
         )}
       </aside>
       <main className="map-wrap">
-        <div className="map-hint">The map comes in a later step.</div>
+        <MapView
+          data={data}
+          selectedId={selectedId}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setFocusIndex(null);
+          }}
+          focusIndex={focusIndex}
+          onFocus={setFocusIndex}
+        />
+        {!data && !loading && <div className="map-hint">Enter a trip to compare three routes.</div>}
+        {loading && <div className="map-hint busy">Finding routes and forecasts…</div>}
       </main>
     </div>
   );
