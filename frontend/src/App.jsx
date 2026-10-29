@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import CheckpointTable from "./components/CheckpointTable.jsx";
+import RouteCards from "./components/RouteCards.jsx";
 import TripForm from "./components/TripForm.jsx";
 import { planTrip } from "./lib/api.js";
-import { formatDuration } from "./lib/risk.js";
 
 export default function App() {
   const [data, setData] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [focusIndex, setFocusIndex] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const abortRef = useRef(null);
@@ -18,13 +21,18 @@ export default function App() {
     setLoading(true);
     setError("");
     try {
-      setData(await planTrip(payload, ctl.signal));
+      const result = await planTrip(payload, ctl.signal);
+      setData(result);
+      setSelectedId(result.recommended_route_id);
+      setFocusIndex(null);
     } catch (e) {
       if (e.name !== "AbortError") setError(e.message);
     } finally {
       if (abortRef.current === ctl) setLoading(false);
     }
   }, []);
+
+  const selected = data?.routes.find((r) => r.id === selectedId);
 
   return (
     <div className="app">
@@ -40,16 +48,25 @@ export default function App() {
           </div>
         )}
         {data && (
-          <div className="card">
-            <h3>Results (temporary view)</h3>
-            {data.routes.map((r) => (
-              <p key={r.id}>
-                <strong>{r.label}</strong>: {r.distance_mi} mi, {formatDuration(r.duration_s)}, worst risk{" "}
-                {r.summary.max_level_label}, severe {r.summary.miles_by_level.severe} mi
-                {r.recommended && " ← recommended"}
-              </p>
+          <>
+            {data.meta.notes.map((n) => (
+              <div key={n} className="card note">
+                {n}
+              </div>
             ))}
-          </div>
+            <RouteCards
+              routes={data.routes}
+              selectedId={selectedId}
+              onSelect={(id) => {
+                setSelectedId(id);
+                setFocusIndex(null);
+              }}
+            />
+            {selected && <CheckpointTable route={selected} focusIndex={focusIndex} onFocus={setFocusIndex} />}
+            <footer>
+              Weather: {data.meta.weather_source}. Times shown in your local time zone. Wind metric: {data.meta.wind_metric}.
+            </footer>
+          </>
         )}
       </aside>
       <main className="map-wrap">
